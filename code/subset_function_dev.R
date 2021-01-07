@@ -84,6 +84,29 @@ comb_table <- rbindlist(subse_preci_datble2)
 data_comb <- readRDS("C:/Users/rkpra/OneDrive/Documents/R_projects/pRecipe/data/database/combi_precip.RDS")
 subset <- readRDS("C:/Users/rkpra/OneDrive/Documents/R_projects/pRecipe/data/database/subset_plot.RDS")
 
+unique(subset$reg_monmean)
+
+precl <- data_comb[name == "precl"]
+
+precl2 <- precl[, ':='(reg_meanmon2 = mean(reg_meanmon), reg_meanmon_std2 = sd(reg_meanmon)), by = mon]
+
+
+ggplot(subset, aes(factor(mon), reg_monmean)) + 
+  geom_bar(stat="identity", position=position_dodge(), alpha=0.5)
+  geom_errorbar(aes( ymin = reg_meanmon2-reg_meanmon_std2, ymax = reg_meanmon2+reg_meanmon_std2), 
+  width=.2)
+
+ggplot(precl2, aes(factor(mon), reg_meanmon2)) + 
+  geom_bar(stat="identity", position=position_dodge(), alpha=0.5) + 
+  geom_errorbar(aes( ymin = reg_meanmon2-reg_meanmon_std2, ymax = reg_meanmon2+reg_meanmon_std2), 
+                width=.2)
+
+
+unique(precl2$reg_meanmon_std2)
+
+tri <- unique(data_comb[name == "precl"], by = c("reg_meanmon"))
+write.csv(tri, "precl_reg_meanmon.csv")
+
 
 write.csv(data_comb, "data.cmob.csv")
 write.csv(subset, "dsubset.csv")
@@ -112,11 +135,16 @@ ggplot(data_comb, aes(Z, reg_meanmon, color = name)) +
   theme_generic
 
 #bar_plot with error bar and standard deviation
-ggplot(data_comb, aes(factor(mon), reg_meanmon, fill = name)) + 
+ggplot(data_comb, aes(factor(mon), reg_monmean, fill = name)) + 
   geom_bar(stat="identity", position=position_dodge(), alpha=0.5) + 
-  geom_errorbar(aes(ymin = reg_meanmon-reg_meanmon_std, ymax = reg_meanmon+reg_meanmon_std), 
-                width=.2)
-  
+geom_errorbar(aes(ymin = reg_monmean - reg_monstd, 
+                  ymax = reg_monmean + reg_monstd), width=.4, 
+              position=position_dodge(width=0.90)) + 
+  theme_generic
+
+
+
+write.csv(data_comb[name == "precl"], "data_comb.csv")
 
 
 #box_plot

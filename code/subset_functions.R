@@ -32,7 +32,7 @@ crop_data <- function(folder_path, name, start_year, end_year, shapefile_path, n
   proj4string(name_sub) <- proj4string(name_shp)
   name_sub <- name_sub[!is.na(over(name_sub, as(name_shp, "SpatialPolygons"))), ]
   name_sub <- as.data.table(name_sub)
-  saveRDS(name_sub, paste0(folder_path, "/../../database/subset.Rds"))
+  saveRDS(name_sub, paste0(folder_path, "/../../database/subset_data.Rds"))
   
   #spatial_plots_mean_sd
   name_sub <- name_sub[, ':='(mon = month(Z), year = year(Z))]
@@ -63,10 +63,11 @@ crop_data <- function(folder_path, name, start_year, end_year, shapefile_path, n
   ggsave(paste0(folder_path, "/../../database/Stnd_dev.png"), width = 7.2, height = 5.3, units = "in", dpi = 600)
   
   #temporal_plots(regional average)
-  name_sub <- name_sub[, reg_meanmon := mean(value), by = .(mon, year)] #mean of all grids for each month & year wise
+  name_sub <- name_sub[, reg_val := mean(value), by = .(mon, year)] #mean of all grids for each month & year wise
+  name_sub <- name_sub[, ':='(reg_monmean = mean(reg_val), reg_monstd = sd(reg_val)), by = mon] #mean monthly regional precip and std
   saveRDS(name_sub, paste0(folder_path, "/../../database/subset_plot.Rds"))
   
-  ggplot(name_sub, aes(Z, reg_meanmon)) + 
+  ggplot(name_sub, aes(Z, reg_val)) + 
     geom_line() + 
     geom_point() + 
     labs(x = "Month", y = "Precipitation (mm)") + 
@@ -75,23 +76,33 @@ crop_data <- function(folder_path, name, start_year, end_year, shapefile_path, n
   
   name_sub$mon <- factor(name_sub$mon)
   
-  box_plot <- ggplot(name_sub, aes(mon, reg_meanmon)) + 
+  box_plot <- ggplot(name_sub, aes(mon, reg_val)) + 
     geom_boxplot() + 
     labs(x = "Month", y = "Precipitation (mm)") + 
     theme_generic
   ggsave(paste0(folder_path, "/../../database/box_plot.png"), width = 7.2, height = 5.3, units = "in", dpi = 600)
   
-  ggplot(name_sub, aes(month(Z), reg_meanmon)) + 
+  ggplot(name_sub, aes(factor(mon), reg_monmean)) + 
+    geom_bar(stat="identity", position=position_dodge(), alpha=0.5) + 
+    geom_errorbar(aes(ymin = reg_monmean - reg_monstd, 
+                      ymax = reg_monmean + reg_monstd), width = .4, 
+                  position=position_dodge(width=0.90)) + 
+    labs(x = "Month", y = "Precipitation (mm/month)") + 
+    theme_generic
+  ggsave(paste0(folder_path, "/../../database/bar_plot.png"), width = 7.2, height = 5.3, units = "in", dpi = 600)
+  
+  
+  ggplot(name_sub, aes(month(Z), reg_val)) + 
     geom_line() + 
     geom_point() + 
     facet_wrap(~year, scales = 'free') + 
     scale_x_discrete(limits = factor(c(1:12))) + 
     theme_bw()
   ggsave(paste0(folder_path, "/../../database/facet_plot.png"), width = 7.2, height = 5.3, units = "in", dpi = 600)
-
+  
 }
 
-###############################################################################
+#####################################################
 
 # test --------------------------------------------------------------------
 database <- "C:/Users/rkpra/OneDrive/Documents/R_projects/pRecipe/data/database/"
@@ -99,14 +110,23 @@ shp_path <- "C:/Users/rkpra/OneDrive/Documents/R_projects/pRecipe/data/shapefile
 
 crop_data(database, "cmap", 2001, 2010, shp_path, "SPH_KRAJ")
 
-crop_data(database, "gpm_imergm", 2001, 2010, shp_path, "India_state")
+crop_data(database, "precl", 2001, 2010, shp_path, "India_state")
 
-####################################################################################
+#####################################################
+
+
+
+
+
+
+
+
 
 # subset_function for CZ_pilot study --------------------------------------
 
 crop_sel_data <- function(folder_path, name, start_year, end_year, shapefile_path, name_shp){
   if (name == "all") name <- c("cmap", "gpcc", "gpcp", "precl")
+  memory.limit(size = 90000)
   folder_pat <- paste0(folder_path, "/", name, ".Rds") %>% as.list()
   dat_list <- lapply(folder_pat, readRDS)
   
@@ -115,9 +135,9 @@ crop_sel_data <- function(folder_path, name, start_year, end_year, shapefile_pat
   bound <- st_bbox(name_shp)
   
   subset_list <- lapply(dat_list, function(i) setDT(i)
-                 [between(x, ((bound[1])-1), ((bound[3])+1)) & 
-                     between(y, ((bound[2])-1), ((bound[4])+1))]
-                 [year(Z) >= start_year & year(Z) <= end_year])
+                        [between(x, ((bound[1])-1), ((bound[3])+1)) & 
+                            between(y, ((bound[2])-1), ((bound[4])+1))]
+                        [year(Z) >= start_year & year(Z) <= end_year])
   
   precipe <- lapply(subset_list, function(i) {
     sp::coordinates(i) <- ~ x + y 
@@ -135,8 +155,8 @@ crop_sel_data <- function(folder_path, name, start_year, end_year, shapefile_pat
                                 [, ':='(mon = month(Z), year = year(Z))]
                                 [, year_val := sum(value), by = .(year, x, y)]
                                 [, ':='(anl_mean = mean(year_val), anl_std = sd(year_val)),  by = .(x, y)]
-                                [, reg_meanmon := mean(value), by = .(mon, year)]
-                                [, reg_meanmon_std := sd(value), by = .(mon, year)])
+                                [, reg_val := mean(value), by = .(mon, year)]
+                                [, ':='(reg_monmean = mean(reg_val), reg_monstd = sd(reg_val)), by = mon])
   
   combi_precip <- rbindlist(subse_preci_datble2)
   saveRDS(combi_precip, paste0(folder_path, "/", "combi_precip.Rds"))
@@ -169,7 +189,7 @@ crop_sel_data <- function(folder_path, name, start_year, end_year, shapefile_pat
   ggsave(paste0(folder_path, "/Ann_std_comb.png"), width = 7.2, height = 5.3, units = "in", dpi = 600)
   
   #temporal_plots------
-  ggplot(combi_precip, aes(Z, reg_meanmon, color = name)) + 
+  ggplot(combi_precip, aes(Z, reg_val, color = name)) + 
     geom_line() + 
     geom_point() + 
     labs(x = "Month", y = "Precipitation (mm)") + 
@@ -177,16 +197,28 @@ crop_sel_data <- function(folder_path, name, start_year, end_year, shapefile_pat
   ggsave(paste0(folder_path, "/Monthly_line_comb.png"), width = 7.2, height = 5.3, units = "in", dpi = 600)
   
   
-  ggplot(combi_precip, aes(factor(mon), reg_meanmon, fill = name)) + 
+  ggplot(combi_precip, aes(factor(mon), reg_val, fill = name)) + 
     geom_boxplot() + 
     labs(x = "Month", y = "Precipitation (mm)") + 
     theme_generic
   ggsave(paste0(folder_path, "/Boxplot_comb.png"), width = 7.2, height = 5.3, units = "in", dpi = 600)
   
   
+  ggplot(combi_precip, aes(factor(mon), reg_monmean, fill = name)) + 
+    geom_bar(stat="identity", position=position_dodge(), alpha=0.5) + 
+    geom_errorbar(aes(ymin = reg_monmean - reg_monstd, 
+                      ymax = reg_monmean + reg_monstd), width = .4, 
+                  position=position_dodge(width=0.90)) + 
+    labs(x = "Month", y = "Precipitation (mm/month)") + 
+    theme_generic
+  ggsave(paste0(folder_path, "/Monthly_bar_comb.png"), width = 7.2, height = 5.3, units = "in", dpi = 600)
+  
+  
 }
 
 #######################################################################################
+
+
 
 # test subset_function for CZ_pilot study --------------------------------------
 
