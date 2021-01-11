@@ -19,109 +19,6 @@ source('./source/palettes.R')
 #' @return a list with the subsetted data sets
 #' @export
 
-crop_data <- function(folder_path, name, start_year, end_year, shapefile_path, name_shp){
-  if (!is.character(folder_path)) stop ("folder_path should be a character string.")
-  folder_path <- paste0(folder_path, "/", name, ".Rds")
-  name <- readRDS(folder_path)
-  shapefile_path <- paste0(shapefile_path, "/", name_shp, ".shp")
-  name_shp <- readOGR(shapefile_path)
-  bound <- st_bbox(name_shp)
-  name_sub <- name[between(x, ((bound[1])-1), ((bound[3])+1)) & between(y, ((bound[2])-1), ((bound[4])+1))]
-  name_sub <- name_sub[year(Z) >= start_year & year(Z) <= end_year]
-  coordinates(name_sub) <- ~ x + y
-  proj4string(name_sub) <- proj4string(name_shp)
-  name_sub <- name_sub[!is.na(over(name_sub, as(name_shp, "SpatialPolygons"))), ]
-  name_sub <- as.data.table(name_sub)
-  saveRDS(name_sub, paste0(folder_path, "/../../database/subset_data.Rds"))
-  
-  #spatial_plots_mean_sd
-  name_sub <- name_sub[, ':='(mon = month(Z), year = year(Z))]
-  name_sub <- name_sub[, year_val := sum(value), by = .(year, x, y)]#annual sum for each grid and year
-  name_sub <- name_sub[, ':='(anl_mean = mean(year_val), anl_std = sd(year_val)),  by = .(x, y)] #annual mean precipitation and sd for each grid
-  shp <- fortify(name_shp)
-  ggplot() +
-    geom_raster(data = name_sub, aes(x, y, fill = anl_mean)) + 
-    coord_fixed(ratio = 1) +
-    scale_fill_viridis(direction = -1) + 
-    labs(x = "Longitude", y = "Latitude") + 
-    ggtitle("Annual mean precipitation (mm/yr)") + 
-    theme_small + 
-    geom_path(data = shp, 
-              aes(x = long, y = lat, group = group))
-  
-  ggsave(paste0(folder_path, "/../../database/Ann_mean_plot.png"), width = 7.2, height = 5.3, units = "in", dpi = 600)
-  
-  ggplot() +
-    geom_raster(data = name_sub, aes(x, y, fill = anl_std)) + 
-    coord_fixed(ratio = 1) +
-    scale_fill_viridis(direction = -1) + 
-    labs(x = "Longitude", y = "Latitude") + 
-    theme_small + 
-    geom_path(data = shp, 
-              aes(x = long, y = lat, group = group))
-  
-  ggsave(paste0(folder_path, "/../../database/Stnd_dev.png"), width = 7.2, height = 5.3, units = "in", dpi = 600)
-  
-  #temporal_plots(regional average)
-  name_sub <- name_sub[, reg_val := mean(value), by = .(mon, year)] #mean of all grids for each month & year wise
-  name_sub <- name_sub[, ':='(reg_monmean = mean(reg_val), reg_monstd = sd(reg_val)), by = mon] #mean monthly regional precip and std
-  saveRDS(name_sub, paste0(folder_path, "/../../database/subset_plot.Rds"))
-  
-  ggplot(name_sub, aes(Z, reg_val)) + 
-    geom_line() + 
-    geom_point() + 
-    labs(x = "Month", y = "Precipitation (mm)") + 
-    theme_generic
-  ggsave(paste0(folder_path, "/../../database/Monthly_line_plot.png"), width = 7.2, height = 5.3, units = "in", dpi = 600)
-  
-  name_sub$mon <- factor(name_sub$mon)
-  
-  box_plot <- ggplot(name_sub, aes(mon, reg_val)) + 
-    geom_boxplot() + 
-    labs(x = "Month", y = "Precipitation (mm)") + 
-    theme_generic
-  ggsave(paste0(folder_path, "/../../database/box_plot.png"), width = 7.2, height = 5.3, units = "in", dpi = 600)
-  
-  ggplot(name_sub, aes(factor(mon), reg_monmean)) + 
-    geom_bar(stat="identity", position=position_dodge(), alpha=0.5) + 
-    geom_errorbar(aes(ymin = reg_monmean - reg_monstd, 
-                      ymax = reg_monmean + reg_monstd), width = .4, 
-                  position=position_dodge(width=0.90)) + 
-    labs(x = "Month", y = "Precipitation (mm/month)") + 
-    theme_generic
-  ggsave(paste0(folder_path, "/../../database/bar_plot.png"), width = 7.2, height = 5.3, units = "in", dpi = 600)
-  
-  
-  ggplot(name_sub, aes(month(Z), reg_val)) + 
-    geom_line() + 
-    geom_point() + 
-    facet_wrap(~year, scales = 'free') + 
-    scale_x_discrete(limits = factor(c(1:12))) + 
-    theme_bw()
-  ggsave(paste0(folder_path, "/../../database/facet_plot.png"), width = 7.2, height = 5.3, units = "in", dpi = 600)
-  
-}
-
-#####################################################
-
-# test --------------------------------------------------------------------
-database <- "C:/Users/rkpra/OneDrive/Documents/R_projects/pRecipe/data/database/"
-shp_path <- "C:/Users/rkpra/OneDrive/Documents/R_projects/pRecipe/data/shapefiles/"
-
-crop_data(database, "cmap", 2001, 2010, shp_path, "SPH_KRAJ")
-
-crop_data(database, "precl", 2001, 2010, shp_path, "India_state")
-
-#####################################################
-
-
-
-
-
-
-
-
-
 # subset_function for CZ_pilot study --------------------------------------
 
 crop_sel_data <- function(folder_path, name, start_year, end_year, shapefile_path, name_shp){
@@ -149,7 +46,20 @@ crop_sel_data <- function(folder_path, name, start_year, end_year, shapefile_pat
   
   subse_preci_datble <- lapply(subse_preci, as.data.table)
   
+  saveRDS(subse_preci_datble, paste0(folder_path, "/", "subse_preci_datble1.Rds"))
   #data_preparation for plots
+  subse_preci_datble <- rbindlist(subse_preci_datble)
+  
+  saveRDS(subse_preci_datble, paste0(folder_path, "/", "subse_preci_datble2.Rds"))
+  
+  mean_all <- subse_preci_datble[, .(value = mean(value), name = factor("average")), by = c("x", "y", "Z")]
+  subse_preci_datble <- rbindlist(list(subse_preci_datble, mean_all))
+  
+  saveRDS(subse_preci_datble, paste0(folder_path, "/", "subse_preci_datble3.Rds"))
+  
+  subse_preci_datble <- split(subse_preci_datble, subse_preci_datble$name)
+  
+  saveRDS(subse_preci_datble, paste0(folder_path, "/", "subse_preci_datble4.Rds"))
   
   subse_preci_datble2 <- lapply(subse_preci_datble, function(i) setDT(i)
                                 [, ':='(mon = month(Z), year = year(Z))]
@@ -158,12 +68,15 @@ crop_sel_data <- function(folder_path, name, start_year, end_year, shapefile_pat
                                 [, reg_val := mean(value), by = .(mon, year)]
                                 [, ':='(reg_monmean = mean(reg_val), reg_monstd = sd(reg_val)), by = mon])
   
+  
+  saveRDS(subse_preci_datble2, paste0(folder_path, "/", "combi_precip_list.Rds"))
+  
   combi_precip <- rbindlist(subse_preci_datble2)
   saveRDS(combi_precip, paste0(folder_path, "/", "combi_precip.Rds"))
   
   #sptial_plots----------
   ggplot() +
-    geom_raster(data = combi_precip, aes(x, y, fill = anl_mean)) + 
+    geom_raster(data = combi_precip[!(name == "average")], aes(x, y, fill = anl_mean)) + 
     coord_fixed(ratio = 1) + 
     scale_fill_viridis(direction = -1) + 
     labs(x = "Longitude", y = "Latitude") + 
@@ -176,7 +89,7 @@ crop_sel_data <- function(folder_path, name, start_year, end_year, shapefile_pat
   ggsave(paste0(folder_path, "/Ann_mean_comb.png"), width = 7.2, height = 5.3, units = "in", dpi = 600)
   
   ggplot() +
-    geom_raster(data = combi_precip, aes(x, y, fill = anl_std)) + 
+    geom_raster(data = combi_precip[!(name == "average")], aes(x, y, fill = anl_std)) + 
     coord_fixed(ratio = 1) + 
     scale_fill_viridis(direction = -1) + 
     labs(x = "Longitude", y = "Latitude") + 
@@ -189,22 +102,23 @@ crop_sel_data <- function(folder_path, name, start_year, end_year, shapefile_pat
   ggsave(paste0(folder_path, "/Ann_std_comb.png"), width = 7.2, height = 5.3, units = "in", dpi = 600)
   
   #temporal_plots------
-  ggplot(combi_precip, aes(Z, reg_val, color = name)) + 
+  ggplot(combi_precip, aes(Z, reg_val, color = name, linetype = name)) + 
     geom_line() + 
     geom_point() + 
+    scale_linetype_manual(values = c(rep("dashed", 4), "solid")) + 
     labs(x = "Month", y = "Precipitation (mm)") + 
     theme_generic
   ggsave(paste0(folder_path, "/Monthly_line_comb.png"), width = 7.2, height = 5.3, units = "in", dpi = 600)
   
   
-  ggplot(combi_precip, aes(factor(mon), reg_val, fill = name)) + 
+  ggplot(combi_precip[!(name == "average")], aes(factor(mon), reg_val, fill = name)) + 
     geom_boxplot() + 
     labs(x = "Month", y = "Precipitation (mm)") + 
     theme_generic
   ggsave(paste0(folder_path, "/Boxplot_comb.png"), width = 7.2, height = 5.3, units = "in", dpi = 600)
   
   
-  ggplot(combi_precip, aes(factor(mon), reg_monmean, fill = name)) + 
+  ggplot(combi_precip[!(name == "average")], aes(factor(mon), reg_monmean, fill = name)) + 
     geom_bar(stat="identity", position=position_dodge(), alpha=0.5) + 
     geom_errorbar(aes(ymin = reg_monmean - reg_monstd, 
                       ymax = reg_monmean + reg_monstd), width = .4, 
@@ -230,8 +144,8 @@ ind_shp <- "C:/Users/rkpra/OneDrive/Documents/R_projects/pRecipe/data/shapefiles
 
 India <- readOGR(ind_shp)
 
-crop_sel_data(database, "all", 2001, 2010, shp_path, "SPH_KRAJ")
-crop_sel_data(database, "all", 2001, 2010, shp_path, "India_state")
+crop_sel_data(database, "all", 2001, 2012, shp_path, "SPH_KRAJ")
+crop_sel_data(database, "all", 2001, 2012, shp_path, "India_state")
 
 #Error: cannot allocate vector of size 548.9 Mb
 
