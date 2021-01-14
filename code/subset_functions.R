@@ -50,17 +50,14 @@ crop_sel_data <- function(folder_path, name, start_year, end_year, shapefile_pat
   #data_preparation for plots
   subse_preci_datble <- rbindlist(subse_preci_datble)
   
-  saveRDS(subse_preci_datble, paste0(folder_path, "/", "subse_preci_datble2.Rds"))
   
   mean_all <- subse_preci_datble[, .(value = mean(value), name = factor("average")), by = c("x", "y", "Z")]
   subse_preci_datble <- rbindlist(list(subse_preci_datble, mean_all))
   
-  saveRDS(subse_preci_datble, paste0(folder_path, "/", "subse_preci_datble3.Rds"))
   
   subse_preci_datble <- split(subse_preci_datble, subse_preci_datble$name)
   
-  saveRDS(subse_preci_datble, paste0(folder_path, "/", "subse_preci_datble4.Rds"))
-  
+ 
   subse_preci_datble2 <- lapply(subse_preci_datble, function(i) setDT(i)
                                 [, ':='(mon = month(Z), year = year(Z))]
                                 [, year_val := sum(value), by = .(year, x, y)]
@@ -133,7 +130,6 @@ crop_sel_data <- function(folder_path, name, start_year, end_year, shapefile_pat
 #######################################################################################
 
 
-
 # test subset_function for CZ_pilot study --------------------------------------
 
 database <- "C:/Users/rkpra/OneDrive/Documents/R_projects/pRecipe/data/database"
@@ -149,4 +145,76 @@ crop_sel_data(database, "all", 2001, 2012, shp_path, "India_state")
 
 #Error: cannot allocate vector of size 548.9 Mb
 
-memory.limit(size = 90000)
+
+###########################################################################
+
+# Chhose_data and create a list of datatable ------------------------------
+
+data_choose <- function(folder_path, ...) {
+  names <- list(...)
+  unlist(names)
+  # return(names)
+  if(names == "all") {
+    names <- c("gpcp", "ghcn")
+    names <- names <- strsplit(names, ",")
+  } else {
+    names <- list(...)
+  }
+  
+  folder_pat <- paste0(folder_path, "/", names, ".Rds")
+  dat_list <- lapply(folder_pat, readRDS) 
+  
+}
+
+
+# subset_data(time, my_shapefile) ------------------------------------
+
+data_subset <- function(folder_path, start_yaer, end_year, shapefile){
+  
+  
+  
+  shapefile_path <- paste0(shapefile_path, "/", name_shp, ".shp")
+  name_shp <- readOGR(shapefile_path)
+  bound <- st_bbox(name_shp)
+  
+  subset_list <- lapply(dat_list, function(i) setDT(i)
+                        [between(x, ((bound[1])-1), ((bound[3])+1)) & 
+                            between(y, ((bound[2])-1), ((bound[4])+1))]
+                        [year(Z) >= start_year & year(Z) <= end_year])
+  
+  precipe <- lapply(subset_list, function(i) {
+    sp::coordinates(i) <- ~ x + y 
+    proj4string(i) <- proj4string(name_shp)
+    i
+  })
+  
+  subse_preci <-  lapply(precipe, function(i) i[!is.na(over(i, as(name_shp, "SpatialPolygons"))), ])   
+  
+  subse_preci_datble <- lapply(subse_preci, as.data.table)
+  
+  saveRDS(subse_preci_datble, paste0(folder_path, "/", "subse_preci_datble1.Rds"))
+  #data_preparation for plots
+  subse_preci_datble <- rbindlist(subse_preci_datble)
+  
+  
+  
+  
+  
+  
+  
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
