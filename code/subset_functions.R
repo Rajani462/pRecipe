@@ -46,10 +46,10 @@ crop_sel_data <- function(folder_path, name, start_year, end_year, shapefile_pat
   
   subse_preci_datble <- lapply(subse_preci, as.data.table)
   
-  saveRDS(subse_preci_datble, paste0(folder_path, "/", "subse_preci_datble1.Rds"))
+  saveRDS(subse_preci_datble, paste0(folder_path, "/", "subse_preci_list.Rds"))
   #data_preparation for plots
   subse_preci_datble <- rbindlist(subse_preci_datble)
-  
+  saveRDS(subse_preci_datble, paste0(folder_path, "/", "subse_preci.Rds"))
   
   mean_all <- subse_preci_datble[, .(value = mean(value), name = factor("average")), by = c("x", "y", "Z")]
   subse_preci_datble <- rbindlist(list(subse_preci_datble, mean_all))
@@ -192,14 +192,9 @@ data_subset <- function(folder_path, start_yaer, end_year, shapefile){
   
   subse_preci_datble <- lapply(subse_preci, as.data.table)
   
-  saveRDS(subse_preci_datble, paste0(folder_path, "/", "subse_preci_datble1.Rds"))
-  #data_preparation for plots
   subse_preci_datble <- rbindlist(subse_preci_datble)
   
-  
-  
-  
-  
+  saveRDS(subse_preci_datble, paste0(folder_path, "/", "subse_preci_datble1.Rds"))
   
   
 }
