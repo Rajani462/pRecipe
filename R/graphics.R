@@ -2,10 +2,20 @@ library(data.table)
 library(ggplot2)
 library(rgdal)
 library(viridis)
-# Plot_time_series() ------------------------------------------------------
+
+# plot_functions -----------------------------------------------------------
 
 
-plot_timeseries <- function(data_table){
+#' Plot monthly time series
+#'
+#' Function for plotting monthly time-series of different data-sets and their average as a multiline plot. .
+#'
+#' @param folder_path a character string with the path where the "data_table" is located.
+#' @param name a character string specify the name of the particular "data_table".
+
+plot_timeseries <- function(folder_path, name){
+  
+  data_table <- readRDS(paste0(folder_path, "/", name, ".Rds"))
   
   mean_all <- data_table[, .(value = mean(value), name = factor("average")), by = c("x", "y", "Z")]
   data_table <- rbind(data_table, mean_all)
@@ -22,12 +32,17 @@ plot_timeseries <- function(data_table){
     theme_bw()
   
 }
-# ---------------------------------------------------------------------------
 
+#' Plot seasonality bar plots
+#'
+#' Function for plotting seasonality of different data-sets as a bar blot along with the error bar of one standard deviation.
+#'
+#' @param folder_path a character string with the path where the "data-table" is located.
+#' @param name a character string specify the name of the particular "data_table".
 
-# plot_seasonal_bar_plot() ------------------------------------------------
-
-plot_seasonality <- function(data_table){
+plot_seasonality <- function(folder_path, name){
+  
+  data_table <- readRDS(paste0(folder_path, "/", name, ".Rds"))
   
   data_table <- data_table[, reg_val := mean(value), 
                            by = .(month(Z), year(Z), name)][, ':='(reg_monmean = mean(reg_val),
@@ -43,12 +58,18 @@ plot_seasonality <- function(data_table){
 
 }
 
-# ---------------------------------------------------------------------------
-
-# plot_raster() -----------------------------------------------------------
 
 
-plot_annmean <- function(data_table, shapefile_path){
+#' Saptial plots
+#'
+#' Function for plotting spatial plot of  annual total mean precipitation of different data-sets along with the overlaid shapefile.
+#' @param data_table a character string with the path where the "data-table" is located.
+#' @param name a character string specify the name of the particular "data_table".
+#' @param shapefile_path a character string represents the path to the particular shape_file. It should ends with "/name.shp"
+
+plot_annmean <- function(folder_path, name, shapefile_path){
+  
+  data_table <- readRDS(paste0(folder_path, "/", name, ".Rds"))
   
   data_table <- data_table[, year_val := sum(value), by = .(year(Z), x, y, name)][, ':='(anl_mean = mean(year_val), 
                                                                      anl_std = sd(year_val)),  by = .(x, y, name)]
@@ -69,10 +90,17 @@ plot_annmean <- function(data_table, shapefile_path){
   
 }
 
-# ---------------------------------------------------------------------------
+#' Spatial plot of standard deviation
+#'
+#' Function for plotting spatial plot of  standard deviation annual precipitation over the years of different data-sets with overlaid shape-file.
+#' @param data_table a character string with the path where the "data-table" is located.
+#' @param name a character string specify the name of the particular "data_table".
+#' @param shapefile_path a character string represents the path to the particular shape_file. It should ends with "/name.shp"
 
 
-plot_annstd <- function(data_table, shapefile_path){
+plot_annstd <- function(folder_path, name, shapefile_path){
+  
+  data_table <- readRDS(paste0(folder_path, "/", name, ".Rds"))
   
   data_table <- data_table[, year_val := sum(value), by = .(year(Z), x, y, name)][, ':='(anl_mean = mean(year_val), 
                                                                                          anl_std = sd(year_val)),  by = .(x, y, name)]
@@ -92,17 +120,7 @@ plot_annstd <- function(data_table, shapefile_path){
   
 }
 
+
 # ---------------------------------------------------------------------------
 
-# test_functions ----------------------------------------------------------
 
-combi <- readRDS(database <- "C:/Users/rkpra/OneDrive/Documents/R_projects/pRecipe/data/database/subse_preci_datble1.RDS")
-comb_data <- rbindlist(combi)
-
-path_shp <- "C:/Users/rkpra/OneDrive/Documents/R_projects/pRecipe/data/shapefiles/SPH_KRAJ.shp"
-
-
-plot_timeseries(comb_data)
-plot_seasonality(comb_data)
-plot_annmean(comb_data, path_shp)
-plot_annstd(comb_data, path_shp)
