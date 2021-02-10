@@ -19,13 +19,14 @@ reformat_20cr <- function(folder_path){
     dummie_table <- data.table::as.data.table(dummie_table)
     dummie_table$layer <- as.Date(dummie_table$layer, format = "X%Y.%m.%d")
     data.table::setnames(dummie_table, "layer", "Z")
-    dummie_table <- dummie_table[y < 90 & y > -90 & x > 0]
+    dummie_table$value <- dummie_table$value * lubridate::days_in_month(dummie_table$Z) * (24/3)
     return(dummie_table)
   })
   stopCluster(cluster)
   precip <- data.table::rbindlist(precip)
   precip[x > 180, x := x - 360]
   precip$name <- "20cr"
+  class(precip) <- append(class(precip),"pRecipe")
   saveRDS(precip, paste0(folder_path, "/../../database/20cr.Rds"))
 }
 
@@ -57,6 +58,7 @@ reformat_cmap <- function(folder_path){
   precip <- data.table::rbindlist(precip)
   precip[x > 180, x := x - 360]
   precip$name <- "cmap"
+  class(precip) <- append(class(precip),"pRecipe")
   saveRDS(precip, paste0(folder_path, "/../../database/cmap.Rds"))
 }
 
@@ -78,7 +80,6 @@ reformat_cpc <- function(folder_path){
     layer_days <- as.Date(names(dummie_table), format = "X%Y.%m.%d")
     layer_months <- c(layer_days[1], layer_days[length(layer_days)])
     layer_months <- seq(layer_months[1], layer_months[2], 'month')
-    dummie_table <- raster::setZ(dummie_table, layer_days)
     dummie_table <- raster::zApply(dummie_table, by = data.table::month, fun = sum, na.rm = TRUE)
     dummie_table <- raster::setZ(dummie_table, layer_months)
     dummie_table <- raster::as.data.frame(dummie_table, xy = TRUE, long = TRUE, na.rm = TRUE)
@@ -89,6 +90,7 @@ reformat_cpc <- function(folder_path){
   precip <- rbindlist(precip)
   precip[x > 180, x := x - 360]
   precip$name <- "cpc"
+  class(precip) <- append(class(precip),"pRecipe")
   saveRDS(precip, paste0(folder_path, "/../../database/cpc.Rds"))
 }
 
@@ -102,7 +104,7 @@ reformat_cru_ts <- function(folder_path){
   if (!is.character(folder_path)) stop ("folder_path should be a character string.")
   folder_path <- paste0(folder_path, "/cru_ts")
   file_name <- list.files(folder_path, full.names = TRUE, pattern = "*.gz")
-  dummie_list <- gunzip(file_name, remove = FALSE, skip = TRUE) %>% raster::brick() %>% raster::as.list()
+  dummie_list <- gunzip(file_name, remove = FALSE, skip = TRUE) %>% raster::brick(varname = "pre") %>% raster::as.list()
   no_cores <- detectCores() - 1
   if(no_cores < 1 | is.na(no_cores))(no_cores <- 1)
   cluster <- makeCluster(no_cores, type = "PSOCK")
@@ -116,6 +118,7 @@ reformat_cru_ts <- function(folder_path){
   stopCluster(cluster)
   precip <- data.table::rbindlist(precip)
   precip$name <- "cru_ts"
+  class(precip) <- append(class(precip),"pRecipe")
   saveRDS(precip, paste0(folder_path, "/../../database/cru_ts.Rds"))
 }
 
@@ -146,6 +149,7 @@ reformat_ghcn <- function(folder_path){
   precip <- data.table::rbindlist(precip)
   precip[x > 180, x := x - 360]
   precip$name <- "ghcn"
+  class(precip) <- append(class(precip),"pRecipe")
   saveRDS(precip, paste0(folder_path, "/../../database/ghcn.Rds"))
 }
 
@@ -173,6 +177,7 @@ reformat_gpcc <- function(folder_path){
   precip <- data.table::rbindlist(precip)
   precip[x > 180, x := x - 360]
   precip$name <- "gpcc"
+  class(precip) <- append(class(precip),"pRecipe")
   saveRDS(precip, paste0(folder_path, "/../../database/gpcc.Rds"))
 }
 
@@ -204,6 +209,7 @@ reformat_gpcp <- function(folder_path){
   precip <- data.table::rbindlist(precip)
   precip[x > 180, x := x - 360]
   precip$name <- "gpcp"
+  class(precip) <- append(class(precip),"pRecipe")
   saveRDS(precip, paste0(folder_path, "/../../database/gpcp.Rds"))
 }
 
@@ -231,7 +237,7 @@ reformat_gpm_imergm <- function(folder_path){
     dummie_table <- raster::brick(dummie_table, xmn = -180, xmx = 180, ymn = -90, ymx = 90, crs = "+proj=longlat +ellps=WGS84 +datum=WGS84")
     dummie_table <- raster::flip(dummie_table, direction = "y")
     dummie_table[dummie_table < 0] <- NA
-    dummie_table <- raster::aggregate(dummie_table, fact = 5, fun = sum, na.rm = TRUE)
+    dummie_table <- raster::aggregate(dummie_table, fact = 5, fun = mean, na.rm = TRUE)
     names(dummie_table) <- layer_name
     dummie_table <- raster::as.data.frame(dummie_table, xy = TRUE, long = TRUE, na.rm = TRUE)
     data.table::setnames(dummie_table, "layer", "Z")
@@ -242,6 +248,7 @@ reformat_gpm_imergm <- function(folder_path){
   stopCluster(cluster)
   precip <- data.table::rbindlist(precip)
   precip$name <- "gpm_imergm"
+  class(precip) <- append(class(precip),"pRecipe")
   saveRDS(precip, paste0(folder_path, "/../../database/gpm_imergm.Rds"))
 }
 
@@ -276,6 +283,7 @@ reformat_ncep_ncar <- function(folder_path){
   precip <- data.table::rbindlist(precip)
   precip[x > 180, x := x - 360]
   precip$name <- "ncep_ncar"
+  class(precip) <- append(class(precip),"pRecipe")
   saveRDS(precip, paste0(folder_path, "/../../database/ncep_ncar.Rds"))
 }
 
@@ -310,6 +318,7 @@ reformat_ncep_doe <- function(folder_path){
   precip <- data.table::rbindlist(precip)
   precip[x > 180, x := x - 360]
   precip$name <- "ncep_doe"
+  class(precip) <- append(class(precip),"pRecipe")
   saveRDS(precip, paste0(folder_path, "/../../database/ncep_doe.Rds"))
 }
 
@@ -338,6 +347,7 @@ reformat_precl <- function(folder_path){
   precip <- data.table::rbindlist(precip)
   precip[x > 180, x := x - 360]
   precip$name <- "precl"
+  class(precip) <- append(class(precip),"pRecipe")
   saveRDS(precip, paste0(folder_path, "/../../database/precl.Rds"))
 }
 
@@ -365,7 +375,7 @@ reformat_trmm_3b43 <- function(folder_path){
     raster::extent(dummie_table) <- c(-180, 180, -50, 50)
     dummie_table <- raster::flip(dummie_table, direction = "y")
     dummie_table[dummie_table < 0] <- NA
-    dummie_table <- raster::aggregate(dummie_table, fact = 2, fun = sum, na.rm = TRUE)
+    dummie_table <- raster::aggregate(dummie_table, fact = 2, fun = mean, na.rm = TRUE)
     names(dummie_table) <- layer_name
     dummie_table <- raster::as.data.frame(dummie_table, xy = TRUE, long = TRUE, na.rm = TRUE)
     data.table::setnames(dummie_table, "layer", "Z")
@@ -376,6 +386,7 @@ reformat_trmm_3b43 <- function(folder_path){
   stopCluster(cluster)
   precip <- data.table::rbindlist(precip)
   precip$name <- "trmm_3b43"
+  class(precip) <- append(class(precip),"pRecipe")
   saveRDS(precip, paste0(folder_path, "/../../database/trmm_3b43.Rds"))
 }
 
@@ -404,6 +415,7 @@ reformat_udel <- function(folder_path){
   precip <- data.table::rbindlist(precip)
   precip[x > 180, x := x - 360]
   precip$name <- "udel"
+  class(precip) <- append(class(precip),"pRecipe")
   saveRDS(precip, paste0(folder_path, "/../../database/udel.Rds"))
 }
 
