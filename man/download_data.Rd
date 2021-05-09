@@ -4,11 +4,9 @@
 \alias{download_data}
 \title{Download and import precipitation data from various sources}
 \usage{
-download_data(project_folder, name = "all", reformat = FALSE)
+download_data(name = "all", project_folder_path = ".", reformat = TRUE)
 }
 \arguments{
-\item{project_folder}{a character string with the path where pRecipe will be hosted. Inside it the required subfolders will be created see \code{\link{create_folders}}}
-
 \item{name}{a character string with the name(s) of the desired data set. Suitable options are:
 \itemize{
 \item{"all" for all of the below listed data sets (default),}
@@ -27,8 +25,17 @@ download_data(project_folder, name = "all", reformat = FALSE)
 \item{"udel" for UDEL v501.}
 }}
 
-\item{reformat}{logical. If TRUE the downloaded datasets are reformatted into data.table and stored in .Rds files. See \code{\link{reformat_data}}}
+\item{project_folder_path}{a character string with the path where pRecipe will be hosted. Inside it the required subfolders will be created see \code{\link{create_folders}}}
+
+\item{reformat}{logical. If TRUE (default) the downloaded data sets are reformatted into data.table and stored in .Rds files. See \code{\link{reformat_data}}}
 }
 \description{
 The function \code{download_data} downloads the selected data product.
+}
+\examples{
+\dontrun{
+download_data("~/global_precipitation/pRecipe")
+download_data("~/projects/czu/pRecipe", c("cru_ts", "cpc", "ghcn", "gpcp"), reformat = TRUE)
+download_data("~/research/pRecipe", c("gpm_imergm", "trmm_3b43"))
+}
 }

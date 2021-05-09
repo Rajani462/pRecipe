@@ -1,4 +1,3 @@
-
 precip_colors <- c("#1f78b4", "#33a02c", "#e31a1c", "#ff7f00", "#6a3d9a", "#b15928", "#a6cee3", "#b2df8a", "#fb9a99", "#fdbf6f", "#cab2d6", "#ffff99")
 
 #' Precipitation line plot
@@ -7,6 +6,7 @@ precip_colors <- c("#1f78b4", "#33a02c", "#e31a1c", "#ff7f00", "#6a3d9a", "#b159
 #'
 #' @param x  a pRecipe data.table.
 #' @return ggplot object
+#' @export
 
 plot_line <- function(x){
   if (length(unique(x$name)) == 1){
@@ -49,6 +49,7 @@ plot_line <- function(x){
 #'
 #' @param x  a pRecipe data.table.
 #' @return ggplot object
+#' @export
 
 plot_bar <- function(x){
   dummie_box <- c(min(x$x), min(x$y), max(x$x), max(x$y))
@@ -71,6 +72,7 @@ plot_bar <- function(x){
 #'
 #' @param x  a pRecipe data.table.
 #' @return ggplot object
+#' @export
 
 plot_box <- function(x){
   dummie_box <- c(min(x$x), min(x$y), max(x$x), max(x$y))
@@ -93,6 +95,7 @@ plot_box <- function(x){
 #' @param x  a pRecipe data.table.
 #' @param monthly logical. If TRUE will generate one plot per month.
 #' @return list with ggplot objects
+#' @export
 
 plot_map <- function(x, monthly = FALSE){
   dummie_box <- c(min(x$x), min(x$y), max(x$x), max(x$y))
@@ -146,8 +149,9 @@ plot_map <- function(x, monthly = FALSE){
 #'
 #' @param x  a pRecipe data.table.
 #' @return list with ggplot objects
+#' @export
  
-plot_matrix <- function(x, monthly = FALSE){
+plot_matrix <- function(x){
   dummie_box <- c(min(x$x), min(x$y), max(x$x), max(x$y))
   dummie_min <- copy(x)
   dummie_min <- dummie_min[, value := mean(value, na.rm = TRUE), by = .(month(Z), year(Z), name)][, .(value)] %>% min() %>% floor()

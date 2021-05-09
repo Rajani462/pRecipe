@@ -7,7 +7,7 @@
 resample_data(x, yearly = TRUE, resolution)
 }
 \arguments{
-\item{x}{a pRecipe data.table imported using \code{import_data}.}
+\item{x}{a pRecipe data.table imported using \code{\link{import_full_data}} or \code{\link{import_subset_data}}.}
 
 \item{yearly}{logical. If TRUE (default) monthly data will be aggregated into yearly.}
 
@@ -18,4 +18,11 @@ a data.table with the resampled data sets
 }
 \description{
 The function \code{resample_data} resamples the imported data.
+}
+\examples{
+\dontrun{
+x <- import_full_data("~/projects/czu/pRecipe/data/database", c("cru_ts", "cpc", "ghcn", "gpcp"))
+y <- resample_data(x, yearly = FALSE, 5)
+z <- resample_data(x, yearly = TRUE, 2.5)
+}
 }
